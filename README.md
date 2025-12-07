@@ -1,4 +1,4 @@
-# Galileo THD 32000 Datalogger
+# Datalogger Web Dashoboard
 
 Aplicación web para la descarga, visualización y exportación de datos del sensor datalogger **Galileo THD 32000** (Temperatura y Humedad).
 
