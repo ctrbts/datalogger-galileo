@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+historial_lecturas/
+build/
+dist/
+installer/

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Ambiental Galileo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- VARIABLES Y BASE --- */
+        :root {
+            --app-primary: #8a2072;
+            --app-accent: #ddbbd4;
+            --humedad-color: #00a0dc;
+            --bg-light: #f8f9fa;
+            --text-dark: #333333;
+            --card-shadow: 0 4px 12px rgba(138, 32, 114, 0.08);
+            --info-color: #17a2b8;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- HEADER TIPO FOOTER INSTITUCIONAL --- */
+        .brand-header {
+            background-color: var(--app-primary);
+            padding: 15px 0;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-identity {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .brand-logo {
+            height: 60px;
+            filter: brightness(0) invert(1);
+            /* Vuelve el logo blanco */
+        }
+
+        .brand-titles {
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .brand-titles h1 {
+            margin: 0;
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        /* ESTILO PARA EL NUEVO SUBTÍTULO */
+        .brand-titles h2 {
+            margin: 4px 0;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .brand-slogan {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+            /* Un poco más tenue */
+            font-size: 13px;
+            font-style: italic;
+            font-weight: 300;
+        }
+
+        /* Botón Config */
+        .config-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+
+        .config-btn:hover {
+            background: white;
+            color: var(--app-primary);
+            border-color: white;
+        }
+
+        /* LAYOUT */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+            width: 100%;
+            box-sizing: border-box;
+            flex: 1;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            position: relative;
+        }
+
+        /* CONTROLS */
+        .controls-flex {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        select,
+        button {
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+
+        .action-btn {
+            background: var(--app-primary);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            padding: 12px 24px;
+        }
+
+        .action-btn:hover {
+            background: var(--app-accent);
+        }
+
+        select:focus {
+            outline: 2px solid var(--app-primary);
+        }
+
+        /* --- UX MEJORA 1: TOOLTIPS --- */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .tooltip-icon {
+            color: var(--info-color);
+            font-size: 16px;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.4;
+        }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- UX MEJORA 2: EMPTY STATE --- */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        .empty-desc {
+            font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* --- UX MEJORA 3: TOAST NOTIFICATION --- */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 3000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 4.5s;
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
+
+        /* INFO & KPIs */
+        .mission-info {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 10px;
+            background: #fdfdfd;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .info-val {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .kpi-section-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: bold;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+
+        .kpi-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-group {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+        }
+
+        .kpi-card {
+            background: #fff;
+            padding: 15px;
+            border-left: 5px solid #ccc;
+            box-shadow: var(--card-shadow);
+            border-radius: 6px;
+        }
+
+        .kpi-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .border-temp {
+            border-color: var(--app-primary);
+        }
+
+        .border-hum {
+            border-color: var(--humedad-color);
+        }
+
+        .text-temp {
+            color: var(--app-primary);
+        }
+
+        .text-hum {
+            color: var(--humedad-color);
+        }
+
+        .status-ok {
+            border-left-color: #28a745;
+        }
+
+        .status-warn {
+            border-left-color: #ffc107;
+            background: #fffbf2;
+        }
+
+        .status-danger {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 50vh;
+            width: 100%;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--app-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--app-primary);
+            border-bottom: 3px solid var(--app-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .history-item:hover {
+            background-color: #f0f0f5;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div style="font-size:18px; color:var(--app-primary); font-weight:600;">Procesando datos...</div>
+    </div>
+    <div id="toast">Notificación</div>
+    <div id="configModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="color:var(--app-primary); margin-top:0;">⚙️ Configuración</h3>
+            <div class="form-group"><label>Puerto COM:</label>
+                <div style="display:flex; gap:5px;"><select id="configPort"></select><button
+                        onclick="cargarPuertos()">🔄</button></div>
+            </div>
+            <div class="form-group"><label>Velocidad:</label><select id="configBaud">
+                    <option value="9600">9600</option>
+                    <option value="19200">19200</option>
+                </select></div>
+            <div class="form-group"><input type="checkbox" id="configSim"> <label for="configSim"
+                    style="display:inline;">Modo Simulación</label></div>
+            <div style="text-align:right;"><button onclick="closeConfig()"
+                    style="background:#ccc; border:none; padding:8px 15px; cursor:pointer;">Cancelar</button> <button
+                    onclick="saveConfig()"
+                    style="background:var(--app-primary); color:white; border:none; padding:8px 15px; cursor:pointer;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="brand-header">
+        <div class="header-content">
+
+            <div class="brand-identity">
+                <div class="brand-titles">
+                    <h1>Nombre del Laboratorio</h1>
+                    <div class="brand-slogan">"Slogan del laboratorio"</div>
+                    <h2>Monitoreo Ambiental - Área de Microbiología</h2>
+                </div>
+            </div>
+
+            <button class="config-btn" onclick="openConfig()">
+                <i class="fas fa-cog"></i> Configuración
+            </button>
+
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('live')">📡 Nueva Lectura</button>
+            <button class="tab-btn" onclick="switchTab('history')">📂 Historial</button>
+        </div>
+
+        <div id="tab-live" class="tab-content active">
+            <div class="card">
+                <div class="controls-flex">
+                    <div>
+                        <div style="padding-bottom: 10px;">
+                            <label style="font-size:12px; color:#888;">Tipo de Equipo (Límites):</label>
+                            <div class="tooltip-container">
+                                <i class="fas fa-info-circle tooltip-icon"></i>
+                                <span class="tooltip-text">Define los rangos de Alerta y Acción según el tipo de equipo
+                                    (ej: 2-8°C).</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center;">
+                            <select id="equipoSelect" onchange="cambiarPresetSinLeer()">
+                                {% for eq in equipos %}
+                                <option value="{{ eq }}">{{ eq }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="padding-bottom: 10px;">
+                            <label style="font-size:12px; color:#888;">ID / Nombre (Opcional):</label>
+                            <div class="tooltip-container">
+                                <i class="fas fa-info-circle tooltip-icon"></i>
+                                <span class="tooltip-text">Define el ID o nombre del equipo para identificarlo en el
+                                    historial, este nombre se mostrará en el archivo CSV.</span>
+                            </div>
+                        </div>
+                        <input type="text" id="equipoTag" placeholder="Ej: Lab-01"
+                            style="padding:12px; border:1px solid #ccc; border-radius:4px; width:150px; font-size:14px;">
+                    </div>
+
+                    <button class="action-btn" onclick="iniciarLecturaSensor()">INICIAR LECTURA SENSOR</button>
+
+                    <span id="dataStatus"
+                        style="font-size:12px; color:#28a745; margin-left:10px; margin-bottom:12px; display:none; font-weight:bold;">
+                        <i class="fas fa-check-circle"></i> Datos Cargados
+                    </span>
+                </div>
+                <div style="margin-top:10px; font-size:12px; color:#888; border-top:1px solid #eee; padding-top:8px;">
+                    <i class="fas fa-lightbulb" style="color:#f0ad4e;"></i> <b>Tip:</b> Los archivos CSV se guardan
+                    automáticamente en <i>Documents/Galileo_Logs</i> cada vez que realiza una lectura exitosa.
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-history" class="tab-content">
+            <div class="card">
+                <p>Archivos guardados en el equipo:</p>
+                <ul class="history-list" id="historyListContainer">
+                    <li>Cargando...</li>
+                </ul>
+                <button class="config-btn" onclick="cargarListaHistorial()">🔄 Actualizar Lista</button>
+            </div>
+        </div>
+
+        <div id="emptyStateContainer" class="card empty-state">
+            <i class="fas fa-plug empty-icon"></i>
+            <div class="empty-title">Sensor desconectado o sin lectura</div>
+            <div class="empty-desc">
+                Para comenzar, conecte el datalogger al puerto USB y presione el botón <b>"INICIAR LECTURA
+                    SENSOR"</b>.<br><br>
+                Si ya tiene datos guardados, vaya a la pestaña <b>Historial</b>.
+            </div>
+        </div>
+
+        <div id="resultsArea" style="display: none;">
+
+            <div class="card" style="padding: 15px;">
+                <h3 id="chartTitle" style="color:var(--app-primary); margin-top:0; margin-bottom:15px;">Esperando
+                    datos...</h3>
+                <div class="mission-info">
+                    <div class="info-item"><span class="info-label">Inicio Lectura</span><span class="info-val"
+                            id="info-start">--</span></div>
+                    <div class="info-item"><span class="info-label">Fin Lectura</span><span class="info-val"
+                            id="info-end">--</span></div>
+                    <div class="info-item"><span class="info-label">Total Muestras</span><span class="info-val"
+                            id="info-count">--</span></div>
+                    <div class="info-item"><span class="info-label">Duración</span><span class="info-val"
+                            id="info-duration">--</span></div>
+                </div>
+            </div>
+
+            <div class="kpi-container">
+                <div class="kpi-group">
+                    <div class="kpi-section-title text-temp">TEMPERATURA (°C)</div>
+                    <div class="kpi-grid">
+                        <div class="kpi-card border-temp">
+                            <div class="kpi-val text-temp" id="val-t-max">--</div>
+                            <div class="kpi-label">Máxima</div>
+                        </div>
+                        <div class="kpi-card border-temp">
+                            <div class="kpi-val text-temp" id="val-t-min">--</div>
+                            <div class="kpi-label">Mínima</div>
+                        </div>
+                        <div class="kpi-card status-ok" id="kpi-alert">
+                            <div class="kpi-val">0</div>
+                            <div class="kpi-label">Min. Alerta</div>
+                        </div>
+                        <div class="kpi-card status-ok" id="kpi-action">
+                            <div class="kpi-val">0</div>
+                            <div class="kpi-label">Min. Falla</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="kpi-group">
+                    <div class="kpi-section-title text-hum">HUMEDAD (%rH)</div>
+                    <div class="kpi-grid">
+                        <div class="kpi-card border-hum">
+                            <div class="kpi-val text-hum" id="val-h-max">--</div>
+                            <div class="kpi-label">Máxima</div>
+                        </div>
+                        <div class="kpi-card border-hum">
+                            <div class="kpi-val text-hum" id="val-h-min">--</div>
+                            <div class="kpi-label">Mínima</div>
+                        </div>
+                        <div class="kpi-card border-hum">
+                            <div class="kpi-val text-hum" id="val-h-avg">--</div>
+                            <div class="kpi-label">Promedio</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="chart-wrapper">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+        let datosEnMemoria = [];
+        let resumenEnMemoria = {};
+        let archivoActualNombre = "";
+
+        // --- FUNCIONES UX (TOAST) ---
+        function showToast(message) {
+            const x = document.getElementById("toast");
+            x.innerText = message;
+            x.className = "show";
+            setTimeout(function () { x.className = x.className.replace("show", ""); }, 5000);
+        }
+
+        async function iniciarLecturaSensor() {
+            const equipo = document.getElementById('equipoSelect').value;
+            const tag = document.getElementById('equipoTag').value; // <--- CAPTURAR VALOR
+
+            setLoading(true);
+            try {
+                // Enviamos equipo Y tag
+                const resData = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ equipo: equipo, tag: tag })
+                });
+                const dataJson = await resData.json();
+
+                if (!dataJson.datos.length) { alert(dataJson.mensaje); return; }
+
+                datosEnMemoria = dataJson.datos;
+                resumenEnMemoria = dataJson.resumen;
+                archivoActualNombre = dataJson.archivo || "Lectura actual";
+
+                document.getElementById('dataStatus').style.display = 'inline-block';
+                if (dataJson.archivo) showToast(`✅ Guardado: ${dataJson.archivo}`);
+
+                await aplicarPresetVisual(equipo);
+
+            } catch (error) {
+                alert("Error: " + error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function cambiarPresetVisual(nombreEquipo) {
+            const resLim = await fetch(`/api/limits/${nombreEquipo}`);
+            const limites = await resLim.json();
+            renderizarDashboard(datosEnMemoria, resumenEnMemoria, limites, nombreEquipo, archivoActualNombre);
+            // FEEDBACK VISUAL RÁPIDO
+            showToast(`📊 Gráfico actualizado para: ${nombreEquipo}`);
+        }
+
+        async function cambiarPresetSinLeer() {
+            if (datosEnMemoria.length === 0) return;
+            document.body.style.cursor = 'wait';
+            const nuevoEquipo = document.getElementById('equipoSelect').value;
+            await aplicarPresetVisual(nuevoEquipo);
+            document.body.style.cursor = 'default';
+        }
+
+        async function aplicarPresetVisual(equipo) {
+            const resLim = await fetch(`/api/limits/${equipo}`);
+            const limites = await resLim.json();
+            renderizarDashboard(datosEnMemoria, resumenEnMemoria, limites, equipo, archivoActualNombre);
+        }
+
+        async function cargarArchivoHistorico(filename) {
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/history/load/${filename}`);
+                const dataJson = await res.json();
+                if (dataJson.error) throw new Error(dataJson.error);
+
+                datosEnMemoria = dataJson.datos;
+                resumenEnMemoria = dataJson.resumen;
+                archivoActualNombre = filename;
+                document.getElementById('dataStatus').style.display = 'inline-block';
+
+                // 1. Setear Preset (Dropdown)
+                const select = document.getElementById('equipoSelect');
+                if (select.querySelector(`option[value="${dataJson.equipo}"]`)) {
+                    select.value = dataJson.equipo;
+                }
+
+                // 2. Setear Tag (Input) - NUEVO
+                const inputTag = document.getElementById('equipoTag');
+                if (dataJson.tag) {
+                    inputTag.value = dataJson.tag;
+                } else {
+                    inputTag.value = ""; // Limpiar si no tiene tag
+                }
+
+                await aplicarPresetVisual(dataJson.equipo);
+                switchTab('live');
+                showToast(`📂 Archivo cargado: ${filename}`);
+
+            } catch (e) { alert(e); } finally { setLoading(false); }
+        }
+
+        function renderizarDashboard(datos, resumen, limites, nombreEquipo, nombreArchivo) {
+            // UX: OCULTAR EMPTY STATE / MOSTRAR RESULTADOS
+            document.getElementById('emptyStateContainer').style.display = 'none';
+            const resArea = document.getElementById('resultsArea');
+            resArea.style.display = 'block'; // Usamos display block en lugar de opacity para layout limpio
+
+            document.getElementById('chartTitle').innerText = `Reporte: ${nombreEquipo} (${nombreArchivo})`;
+
+            document.getElementById('info-start').innerText = resumen.inicio;
+            document.getElementById('info-end').innerText = resumen.fin;
+            document.getElementById('info-count').innerText = resumen.muestras;
+            const d1 = new Date(resumen.inicio); const d2 = new Date(resumen.fin);
+            const diffHrs = ((d2 - d1) / 36e5).toFixed(1);
+            document.getElementById('info-duration').innerText = `${diffHrs} Horas`;
+
+            document.getElementById('val-t-max').innerText = resumen.temp_max + "°C";
+            document.getElementById('val-t-min').innerText = resumen.temp_min + "°C";
+            document.getElementById('val-h-max').innerText = resumen.hum_max + "%";
+            document.getElementById('val-h-min').innerText = resumen.hum_min + "%";
+            document.getElementById('val-h-avg').innerText = resumen.hum_prom + "%";
+
+            let alertas = 0, fallas = 0;
+            const lTemp = limites.temp;
+            if (lTemp) {
+                datos.forEach(d => {
+                    const t = d.temp;
+                    if ((lTemp.accion[0] != null && t < lTemp.accion[0]) || (lTemp.accion[1] != null && t > lTemp.accion[1])) { fallas++; }
+                    else if ((lTemp.alerta[0] != null && t < lTemp.alerta[0]) || (lTemp.alerta[1] != null && t > lTemp.alerta[1])) { alertas++; }
+                });
+            }
+
+            const kpiAlert = document.getElementById('kpi-alert');
+            kpiAlert.querySelector('.kpi-val').innerText = (alertas * 15) + " min";
+            kpiAlert.className = alertas > 0 ? "kpi-card status-warn" : "kpi-card status-ok";
+            const kpiAction = document.getElementById('kpi-action');
+            kpiAction.querySelector('.kpi-val').innerText = (fallas * 15) + " min";
+            kpiAction.className = fallas > 0 ? "kpi-card status-danger" : "kpi-card status-ok";
+
+            const labels = datos.map(d => d.fecha);
+            const temps = datos.map(d => d.temp);
+            const hums = datos.map(d => d.hum);
+
+            const annotations = {};
+            const yMaxChart = Math.max(resumen.temp_max, lTemp?.accion[1] || -999) + 2;
+            const yMinChart = Math.min(resumen.temp_min, lTemp?.accion[0] || 999) - 2;
+
+            if (lTemp) {
+                if (lTemp.accion[1] !== null) annotations.highAct = { type: 'box', yScaleID: 'y', yMin: lTemp.accion[1], yMax: yMaxChart + 10, backgroundColor: 'rgba(220, 53, 69, 0.1)', borderWidth: 0 };
+                if (lTemp.alerta[1] !== null && lTemp.accion[1]) annotations.highAlert = { type: 'box', yScaleID: 'y', yMin: lTemp.alerta[1], yMax: lTemp.accion[1], backgroundColor: 'rgba(255, 193, 7, 0.1)', borderWidth: 0 };
+                if (lTemp.accion[0] !== null) annotations.lowAct = { type: 'box', yScaleID: 'y', yMin: yMinChart - 10, yMax: lTemp.accion[0], backgroundColor: 'rgba(220, 53, 69, 0.1)', borderWidth: 0 };
+                if (lTemp.alerta[0] !== null && lTemp.accion[0]) annotations.lowAlert = { type: 'box', yScaleID: 'y', yMin: lTemp.accion[0], yMax: lTemp.alerta[0], backgroundColor: 'rgba(255, 193, 7, 0.1)', borderWidth: 0 };
+            }
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Temperatura (°C)', data: temps, borderColor: '#8a2072', backgroundColor: 'rgba(138, 32, 114, 0.05)', yAxisID: 'y', pointRadius: 1, borderWidth: 2, tension: 0.2, fill: true },
+                        { label: 'Humedad (%rH)', data: hums, borderColor: '#00a0dc', backgroundColor: 'transparent', yAxisID: 'y1', pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5], tension: 0.2 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: { annotation: { annotations: annotations }, tooltip: { callbacks: { label: function (context) { let label = context.dataset.label || ''; if (label) label += ': '; if (context.parsed.y !== null) label += context.parsed.y; return label; } } } },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 8 } },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Temperatura (°C)', color: '#8a2072' } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Humedad (%)', color: '#00a0dc' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        function switchTab(t) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); if (t === 'live') { document.getElementById('tab-live').classList.add('active'); document.querySelector('button[onclick="switchTab(\'live\')"]').classList.add('active'); } else { document.getElementById('tab-history').classList.add('active'); document.querySelector('button[onclick="switchTab(\'history\')"]').classList.add('active'); cargarListaHistorial(); } }
+        function setLoading(l) { document.getElementById('loadingOverlay').style.display = l ? 'flex' : 'none'; }
+        async function openConfig() { document.getElementById('configModal').style.display = 'flex'; await cargarPuertos(); const r = await fetch('/api/config'); const c = await r.json(); document.getElementById('configPort').value = c.puerto; document.getElementById('configBaud').value = c.velocidad; document.getElementById('configSim').checked = c.simulacion; }
+        function closeConfig() { document.getElementById('configModal').style.display = 'none'; }
+        async function cargarPuertos() { const s = document.getElementById('configPort'); s.innerHTML = '<option>...</option>'; const r = await fetch('/api/ports'); const p = await r.json(); s.innerHTML = ''; p.forEach(x => { const o = document.createElement('option'); o.value = x.device; o.text = x.device; s.add(o); }); }
+        async function saveConfig() { const c = { puerto: document.getElementById('configPort').value, velocidad: parseInt(document.getElementById('configBaud').value), simulacion: document.getElementById('configSim').checked }; await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }); closeConfig(); }
+        async function cargarListaHistorial() { const l = document.getElementById('historyListContainer'); l.innerHTML = '<li>...</li>'; const r = await fetch('/api/history/list'); const a = await r.json(); l.innerHTML = ''; a.forEach(f => { const li = document.createElement('li'); li.className = 'history-item'; li.innerText = f; li.onclick = () => cargarArchivoHistorico(f); l.appendChild(li); }); }
+
+    </script>
+</body>
+
+</html>
