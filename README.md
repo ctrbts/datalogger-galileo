@@ -1,6 +1,6 @@
 # Galileo THD 32000 Datalogger
 
-Aplicación y web para la descarga, visualización y exportación de datos del sensor datalogger **Galileo THD 32000** (Temperatura y Humedad).
+Aplicación web para la descarga, visualización y exportación de datos del sensor datalogger **Galileo THD 32000** (Temperatura y Humedad).
 
 Esta herramienta permite conectar el sensor vía puerto serie (USB), descargar el historial completo de grabaciones, visualizar gráficas interactivas y analizar estadísticas (máximos, mínimos, promedios).
 
@@ -56,13 +56,9 @@ pyinstaller Galileo_Datalogger.spec
 
 El ejecutable resultante se encontrará en la carpeta `dist/Galileo_Datalogger`.
 
-## Crear Instalador (Windows)
+Aclaración sobre pyinstaller:
 
-Para crear un instalador profesional en Windows, se recomienda utilizar **Inno Setup**.
-
-1. Descargar e instalar [Inno Setup](https://jrsoftware.org/isinfo.php).
-2. Crear un script `.iss` apuntando a la carpeta `dist/Galileo_Datalogger`.
-3. Compilar el script para generar el `setup.exe`.
+Pyinstaller es un herramienta que permite convertir un script de Python en un binario ejecutable, no hace compilación cruzada, para crea un .exe debe ejecutarlo en Windows.
 
 ## Licencia
 
