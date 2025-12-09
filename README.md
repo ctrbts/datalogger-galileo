@@ -4,6 +4,8 @@ Aplicación web para la descarga, visualización y exportación de datos del sen
 
 Esta herramienta permite conectar el sensor vía puerto serie (USB), descargar el historial completo de grabaciones, visualizar gráficas interactivas y analizar estadísticas (máximos, mínimos, promedios).
 
+![image](screenshot.png)
+
 ## Características
 
 - 📡 **Lectura directa** del sensor Galileo THD 32000.
